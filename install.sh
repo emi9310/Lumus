@@ -1,13 +1,18 @@
 #!/bin/bash
 
-# Renombrar el archivo
-mv lumus.py lumus
+# Instalar dependencias
+echo "Instalando dependencias..."
+sudo apt-get update  # Actualizar la lista de paquetes
+sudo apt-get install -y python3-pip  # Instalar pip para Python 3
+pip3 install colorama  # Instalar la dependencia colorama
 
-# Agregar el shebang
-echo '#!/usr/bin/env python3' | cat - lumus > temp && mv temp lumus
+# Agregar permisos de ejecución
+echo "Agregando permisos de ejecución..."
+chmod +x nombre_del_script.py
 
-# Dar permisos de ejecución
-chmod +x lumus
+# Agregar al PATH (opcional)
+# Si quieres agregar el script al PATH para ejecutarlo desde cualquier ubicación, descomenta las siguientes líneas:
+# echo "Moviendo el script a /usr/local/bin..."
+# sudo mv nombre_del_script.py /usr/local/bin/
 
-# Mover el archivo a /usr/local/bin
-sudo mv lumus /usr/local/bin
+echo "¡Instalación completada!"
