@@ -122,6 +122,7 @@ if __name__ == "__main__":
       ░ ░    ░░░ ░ ░ ░      ░    ░░░ ░ ░ ░  ░  ░  
         ░  ░   ░            ░      ░           ░  
     """ + Style.RESET_ALL
+
     print(nombre)
 
     print("Mirando por ahi...")
