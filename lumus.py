@@ -129,6 +129,3 @@ if __name__ == "__main__":
 
     if not (args.enumerar or args.vulnerabilidades):
         print("No se ha especificado ninguna acción. Usa -h para ver las opciones disponibles.")
-
-                                                                                                    
-
