@@ -8,7 +8,7 @@ pip3 install colorama  # Instalar la dependencia colorama
 
 # Agregar permisos de ejecución
 echo "Agregando permisos de ejecución..."
-chmod +x nombre_del_script.py
+chmod +x lumus.py
 
 # Agregar al PATH (opcional)
 # Si quieres agregar el script al PATH para ejecutarlo desde cualquier ubicación, descomenta las siguientes líneas:
