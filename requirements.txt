@@ -1,2 +1,5 @@
 argparse
 colorama
+nmap
+sublist3r
+ping
