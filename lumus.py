@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import argparse
 import subprocess
 from colorama import Fore, Style
@@ -112,17 +114,14 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     nombre = Fore.GREEN + """
-    
 #   _                               
 #  | |                              
 #  | |    _   _ _ __ ___  _   _ ___ 
 #  | |   | | | | '_ ` _ \| | | / __|
 #  | |___| |_| | | | | | | |_| \__ \
 #  \_____/\__,_|_| |_| |_|\__,_|___/
-#                                                                                                     
-
-
-    """ + Style.RESET_ALL
+# 
+""" + Style.RESET_ALL
 
     print(nombre)
 
@@ -136,3 +135,6 @@ if __name__ == "__main__":
 
     if not (args.enumerar or args.vulnerabilidades):
         print("No se ha especificado ninguna acción. Usa -h para ver las opciones disponibles.")
+
+                                                                                                    
+
