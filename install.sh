@@ -13,6 +13,6 @@ chmod +x lumus.py
 # Agregar al PATH (opcional)
 # Si quieres agregar el script al PATH para ejecutarlo desde cualquier ubicación, descomenta las siguientes líneas:
 # echo "Moviendo el script a /usr/local/bin..."
-# sudo mv nombre_del_script.py /usr/local/bin/
+# sudo mv lumus.py /usr/local/bin/
 
 echo "¡Instalación completada!"
