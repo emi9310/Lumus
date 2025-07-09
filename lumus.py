@@ -2,92 +2,106 @@
 
 import argparse
 import subprocess
-from colorama import Fore, Style
+import shutil
 import sys
 import time
+from colorama import Fore, Style, init
 
-def hacer_ping(host):
+init(autoreset=True)
+
+# ─────────────── UTILIDADES DE COLOR Y MENSAJES ───────────────
+
+def imprimir_error(mensaje, stderr=""):
+    print(Fore.RED + "[ERROR] " + mensaje + Style.RESET_ALL)
+    if stderr:
+        print(Fore.RED + stderr.strip() + Style.RESET_ALL)
+
+def imprimir_info(mensaje):
+    print(Fore.CYAN + "[INFO] " + mensaje + Style.RESET_ALL)
+
+def imprimir_ok(mensaje):
+    print(Fore.GREEN + "[OK] " + mensaje + Style.RESET_ALL)
+
+def imprimir_advertencia(mensaje):
+    print(Fore.YELLOW + "[!] " + mensaje + Style.RESET_ALL)
+
+# ─────────────── DEPENDENCIAS ───────────────
+
+def verificar_dependencias(comandos):
+    for comando in comandos:
+        if not shutil.which(comando):
+            imprimir_error(f"'{comando}' no está instalado. Instálalo para continuar.")
+            sys.exit(1)
+
+# ─────────────── EJECUCIÓN DE COMANDOS ───────────────
+
+def ejecutar_comando(cmd, descripcion, debug=False):
     try:
-        resultado = subprocess.run(['ping', '-c', '4', host], capture_output=True, text=True)
+        resultado = subprocess.run(cmd, capture_output=True, text=True)
+        if resultado.returncode != 0:
+            imprimir_error(f"Falló {descripcion}", resultado.stderr)
+            return None
+        if debug:
+            print(Fore.LIGHTBLACK_EX + resultado.stdout + Style.RESET_ALL)
+        return resultado.stdout
     except Exception as e:
-        print(Fore.RED + f"Error al ejecutar ping: {e}" + Style.RESET_ALL)
+        imprimir_error(f"Excepción ejecutando {descripcion}: {e}")
+        return None
+
+# ─────────────── FUNCIONES PRINCIPALES ───────────────
+
+def hacer_ping(host, debug=False):
+    imprimir_info(f"Haciendo ping a {host}")
+    salida = ejecutar_comando(['ping', '-c', '4', host], 'ping', debug)
+    if not salida:
         return
 
-    if resultado.returncode != 0:
-        print(Fore.RED + "Error en el comando ping. Verifique el host y los permisos." + Style.RESET_ALL)
-        print(Fore.RED + resultado.stderr + Style.RESET_ALL)
-        return
-
-    lineas = resultado.stdout.split('\n')
+    lineas = salida.splitlines()
     ip = ""
-    sistema_operativo = ""
-
     for linea in lineas:
         if "PING" in linea:
-            ip = linea.split()[2].strip('()')
+            ip = linea.split()[2].strip("()")
             break
+    print(Fore.MAGENTA + f"\nIP: {ip}" + Style.RESET_ALL)
 
-    print(Fore.MAGENTA + f"\nIP: {ip}\n" + Style.RESET_ALL)
-
-    if "Destination Host Unreachable" in resultado.stdout:
-        print(Fore.RED + "El host está fuera de línea" + Style.RESET_ALL)
+    if "Destination Host Unreachable" in salida:
+        imprimir_error("El host está fuera de línea.")
     else:
-        print(Fore.GREEN + "ONLINE" + Style.RESET_ALL)
+        imprimir_ok("ONLINE")
 
     for linea in lineas:
-        if "time=" in linea:
+        if any(x in linea for x in ["time=", "ttl=", "packets transmitted"]):
             print(Fore.LIGHTBLACK_EX + linea.strip() + Style.RESET_ALL)
-        elif "ttl=" in linea:
-            print(Fore.LIGHTBLACK_EX + linea.strip() + Style.RESET_ALL)
-        elif "packets transmitted" in linea:
-            print(Fore.LIGHTBLACK_EX + linea.strip() + Style.RESET_ALL)
-            break
 
-    if "ttl=" in resultado.stdout.lower():
-        sistema_operativo = "Linux"
-    elif "TTL=" in resultado.stdout:
-        sistema_operativo = "Windows"
-    else:
-        sistema_operativo = "No se pudo determinar el sistema operativo"
-
+    sistema_operativo = detectar_sistema_operativo(salida)
     print(Fore.BLUE + f"Sistema operativo: {sistema_operativo}" + Style.RESET_ALL)
 
-def enumerar_subdominios(dominio):
-    print("\n")
-    try:
-        resultado = subprocess.run(['sublist3r', '-d', dominio], capture_output=True, text=True)
-    except Exception as e:
-        print(Fore.RED + f"Error al ejecutar sublist3r: {e}" + Style.RESET_ALL)
+def detectar_sistema_operativo(salida):
+    if "ttl=" in salida.lower():
+        return "Linux"
+    elif "TTL=" in salida:
+        return "Windows"
+    return "Desconocido"
+
+def enumerar_subdominios(dominio, debug=False):
+    imprimir_info(f"Enumerando subdominios para {dominio}")
+    salida = ejecutar_comando(['sublist3r', '-d', dominio], 'sublist3r', debug)
+    if not salida:
         return
 
-    if resultado.returncode != 0:
-        print(Fore.RED + "Error en el comando sublist3r. Verifique el dominio y los permisos." + Style.RESET_ALL)
-        print(Fore.RED + resultado.stderr + Style.RESET_ALL)
-        return
-
-    lineas = resultado.stdout.split('\n')
-    for linea in lineas:
+    for linea in salida.splitlines():
         if "Total Unique Subdomains Found" in linea:
             print(Fore.YELLOW + linea + Style.RESET_ALL)
-            break
-    for linea in lineas:
-        if dominio in linea and "." in linea:
+        elif dominio in linea and "." in linea:
             print(Fore.LIGHTBLACK_EX + linea.strip() + Style.RESET_ALL)
 
-def escanear_vulnerabilidades(host):
-    print(Fore.YELLOW + "\nEscaneando vulnerabilidades en", host + Style.RESET_ALL)
-    try:
-        resultado = subprocess.run(['nmap', '-sC', '-sV', '--script', 'vuln', host], capture_output=True, text=True)
-    except Exception as e:
-        print(Fore.RED + f"Error al ejecutar nmap: {e}" + Style.RESET_ALL)
+def escanear_vulnerabilidades(host, debug=False):
+    imprimir_info(f"Escaneando vulnerabilidades en {host} con Nmap")
+    salida = ejecutar_comando(['nmap', '-sC', '-sV', '--script', 'vuln', host], 'nmap', debug)
+    if not salida:
         return
 
-    if resultado.returncode != 0:
-        print(Fore.RED + "Error en el comando nmap. Verifique el host y los permisos." + Style.RESET_ALL)
-        print(Fore.RED + resultado.stderr + Style.RESET_ALL)
-        return
-
-    lineas = resultado.stdout.split('\n')
+    lineas = salida.splitlines()
     rdns_record = ""
     ports_info = []
 
@@ -101,31 +115,46 @@ def escanear_vulnerabilidades(host):
         print(Fore.LIGHTBLACK_EX + rdns_record + Style.RESET_ALL)
 
     print(Fore.YELLOW + "\nPORT  STATE  SERVICE VERSION" + Style.RESET_ALL)
-    for port_info in ports_info:
-        print(port_info)
+    for port in ports_info:
+        print(port)
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Programa Lumus con banderas.')
+# ─────────────── PROGRAMA PRINCIPAL ───────────────
 
-    parser.add_argument('host', type=str, help='IP o Dominio a explorar')
-    parser.add_argument('-e', '--enumerar', action='store_true', help='Enumerar subdominios del dominio')
-    parser.add_argument('-v', '--vulnerabilidades', action='store_true', help='Escanear vulnerabilidades del host')
+def main():
+    parser = argparse.ArgumentParser(description='Lumus: Herramienta de red todo-en-uno')
+    parser.add_argument('host', type=str, help='IP o dominio a explorar')
+    parser.add_argument('-e', '--enumerar', action='store_true', help='Enumerar subdominios')
+    parser.add_argument('-v', '--vulnerabilidades', action='store_true', help='Escanear vulnerabilidades')
+    parser.add_argument('-d', '--debug', action='store_true', help='Mostrar salida completa de comandos')
 
     args = parser.parse_args()
 
-    nombre = Fore.GREEN + """
-▙▄ ▙▟ ▛▚▞▜ ▙▟ ▟▛ 
-""" + Style.RESET_ALL
+    print(Fore.GREEN + """
+██╗     ██╗   ██╗███╗   ███╗██╗   ██╗███████╗
+██║     ██║   ██║████╗ ████║██║   ██║██╔════╝
+██║     ██║   ██║██╔████╔██║██║   ██║███████╗
+██║     ██║   ██║██║╚██╔╝██║██║   ██║╚════██║
+███████╗╚██████╔╝██║ ╚═╝ ██║╚██████╔╝███████║
+╚══════╝ ╚═════╝ ╚═╝     ╚═╝ ╚═════╝ ╚══════╝
+    """ + Style.RESET_ALL)
 
-    print(nombre)
+    verificar_dependencias(['ping', 'nmap', 'sublist3r'])
 
-    print("Mirando por ahi...")
-    hacer_ping(args.host)
+    start_time = time.time()
+
+    hacer_ping(args.host, args.debug)
+
     if args.enumerar:
-        print("\nSubdominios...")
-        enumerar_subdominios(args.host)
+        enumerar_subdominios(args.host, args.debug)
+
     if args.vulnerabilidades:
-        escanear_vulnerabilidades(args.host)
+        escanear_vulnerabilidades(args.host, args.debug)
 
     if not (args.enumerar or args.vulnerabilidades):
-        print("No se ha especificado ninguna acción. Usa -h para ver las opciones disponibles.")
+        imprimir_advertencia("No se especificó ninguna acción. Usa -h para ver las opciones.")
+
+    duracion = time.time() - start_time
+    print(Fore.LIGHTBLACK_EX + f"\nDuración total: {duracion:.2f} segundos" + Style.RESET_ALL)
+
+if __name__ == "__main__":
+    main()
